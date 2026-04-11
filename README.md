@@ -2,7 +2,7 @@
 
 **RepoMind** is a production-grade codebase analysis platform that transforms GitHub repositories into interactable knowledge bases. Unlike standard RAG tools, RepoMind is history-aware—it doesn't just know what the code *is*, it knows *why* it changed.
 
-![RepoMind Landing Page](https://raw.githubusercontent.com/naitikmmmut/repomind/main/screenshot.png) *(Placeholder for your actual screenshot link)*
+![RepoMind Landing Page](screenshot.png)
 
 ---
 
