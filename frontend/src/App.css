@@ -1,0 +1,323 @@
+/* RepoMind - Codebase Archaeologist Styles */
+
+/* Sidebar */
+.sidebar {
+    width: 280px;
+    min-width: 280px;
+    border-right: 1px solid hsl(var(--border));
+    background: hsl(var(--card));
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.sidebar-header {
+    padding: 20px 16px;
+    border-bottom: 1px solid hsl(var(--border));
+}
+
+.sidebar-repos {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.repo-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 150ms;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.repo-item:hover {
+    background: hsl(var(--surface-hover));
+}
+
+.repo-item.active {
+    background: hsl(var(--primary) / 0.1);
+    color: hsl(var(--primary));
+    border-left: 2px solid hsl(var(--primary));
+}
+
+/* Main Content */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    background: hsl(var(--background));
+}
+
+/* Chat Interface */
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+}
+
+.chat-input-area {
+    border-top: 1px solid hsl(var(--border));
+    padding: 16px 24px;
+    background: hsl(var(--card));
+}
+
+.message-bubble {
+    margin-bottom: 16px;
+    max-width: 85%;
+}
+
+.message-bubble.ai {
+    border-left: 4px solid hsl(var(--primary));
+    border-top: 1px solid hsl(var(--border));
+    border-right: 1px solid hsl(var(--border));
+    border-bottom: 1px solid hsl(var(--border));
+    background: hsl(var(--card));
+    padding: 16px;
+}
+
+.message-bubble.user {
+    margin-left: auto;
+    text-align: right;
+    border: 1px solid hsl(var(--border));
+    background: hsl(var(--surface-hover));
+    padding: 16px;
+}
+
+/* Code blocks in chat */
+.code-block {
+    background: #0F172A;
+    color: #F8FAFC;
+    padding: 16px;
+    margin-top: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    overflow-x: auto;
+    border-left: 2px solid hsl(var(--primary));
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.code-block-header {
+    background: #1E293B;
+    color: #94A3B8;
+    padding: 6px 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border-left: 2px solid hsl(var(--primary));
+}
+
+/* Ingestion Status */
+.status-terminal {
+    background: #0F172A;
+    color: #F8FAFC;
+    padding: 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    border: 1px solid hsl(var(--border));
+    min-height: 200px;
+    overflow-y: auto;
+}
+
+.status-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-line::before {
+    content: '>';
+    color: hsl(var(--primary));
+    font-weight: bold;
+}
+
+.status-line.completed::before {
+    content: '✓';
+    color: #22C55E;
+}
+
+.status-line.failed::before {
+    content: '✗';
+    color: hsl(var(--destructive));
+}
+
+.status-line.active::before {
+    content: '...';
+    color: #F59E0B;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0.3; }
+}
+
+/* Progress bar */
+.progress-bar {
+    height: 2px;
+    background: hsl(var(--border));
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: hsl(var(--primary));
+    transition: width 300ms ease;
+}
+
+/* Empty state */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 48px;
+    text-align: center;
+}
+
+/* Sources panel */
+.sources-panel {
+    border-top: 1px solid hsl(var(--border));
+    padding: 12px 16px;
+    background: hsl(var(--card));
+}
+
+.source-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border: 1px solid hsl(var(--border));
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    margin: 2px;
+    cursor: pointer;
+    transition: all 150ms;
+}
+
+.source-chip:hover {
+    background: hsl(var(--surface-hover));
+    box-shadow: 2px 2px 0px hsl(var(--primary));
+    transform: translate(-1px, -1px);
+}
+
+/* Button overrides */
+.btn-primary {
+    background: #002FA7;
+    color: white;
+    border: none;
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 12px;
+    padding: 10px 24px;
+    cursor: pointer;
+    transition: all 150ms;
+}
+
+.btn-primary:hover {
+    background: #00227A;
+    box-shadow: 4px 4px 0px #002FA7;
+    transform: translate(-2px, -2px);
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+.btn-secondary {
+    background: transparent;
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border));
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 12px;
+    padding: 10px 24px;
+    cursor: pointer;
+    transition: all 150ms;
+}
+
+.btn-secondary:hover {
+    background: hsl(var(--surface-hover));
+}
+
+.btn-destructive {
+    background: transparent;
+    color: hsl(var(--destructive));
+    border: 1px solid hsl(var(--destructive));
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 10px;
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: all 150ms;
+}
+
+.btn-destructive:hover {
+    background: hsl(var(--destructive));
+    color: white;
+}
+
+/* Overline text */
+.overline {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: hsl(var(--muted-foreground));
+}
+
+/* Input override */
+.input-field {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid hsl(var(--border));
+    background: hsl(var(--card));
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    outline: none;
+    transition: all 150ms;
+}
+
+.input-field:focus {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+}
+
+.input-field::placeholder {
+    color: hsl(var(--muted-foreground));
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+}

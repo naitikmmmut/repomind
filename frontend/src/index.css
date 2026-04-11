@@ -1,0 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Chivo:wght@400;700;900&family=IBM+Plex+Mono:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --background: 210 20% 98%;
+        --foreground: 222 84% 5%;
+        --card: 0 0% 100%;
+        --card-foreground: 222 84% 5%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 222 84% 5%;
+        --primary: 226 100% 33%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 210 40% 96%;
+        --secondary-foreground: 222 84% 5%;
+        --muted: 210 40% 96%;
+        --muted-foreground: 215 16% 47%;
+        --accent: 210 40% 96%;
+        --accent-foreground: 222 84% 5%;
+        --destructive: 12 100% 50%;
+        --destructive-foreground: 0 0% 100%;
+        --border: 214 32% 91%;
+        --input: 214 32% 91%;
+        --ring: 226 100% 33%;
+        --radius: 0px;
+
+        --code-bg: 222 47% 11%;
+        --code-text: 210 40% 98%;
+        --surface-hover: 210 40% 96%;
+    }
+
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+        font-family: 'IBM Plex Sans', sans-serif;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Chivo', sans-serif;
+    }
+
+    code, pre, .font-mono {
+        font-family: 'IBM Plex Mono', monospace;
+    }
+}
+
+@layer base {
+    [data-debug-wrapper="true"] {
+        display: contents !important;
+    }
+}
