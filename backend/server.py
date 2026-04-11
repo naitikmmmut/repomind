@@ -4,7 +4,7 @@ from pathlib import Path
 # Ensure backend root is in path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from fastapi import FastAPI, APIRouter, BackgroundTasks
+from fastapi import FastAPI, APIRouter, BackgroundTasks, Depends
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 import os
@@ -15,20 +15,32 @@ from datetime import datetime, timezone
 
 from config import ENV, NVIDIA_API_KEY
 from ingestion.job_tracker import create_job, update_job, get_job, get_all_jobs
-from ingestion.cloner import shallow_clone
+from ingestion.cloner import clone_repository
 from ingestion.parser import parse_repository
 from services.llm import get_embeddings
 from services.vector_store import get_vector_store
 from rag.retriever import query_codebase
 from utils.logger import get_logger
 
+from sqlalchemy.orm import Session
+from db.database import get_db, create_tables
+from db.chat_store import (
+    create_session, save_message,
+    get_session_messages, get_sessions_for_repo,
+    get_all_sessions, delete_session,
+    save_repo, get_all_repos, delete_repo
+)
+
+# Initialize database tables on startup
+create_tables()
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 logger = get_logger(__name__)
 
-# ── In-memory repository store (replaces MongoDB) ──────────────────────────
-repositories_store: dict = {}
+# In-memory job store for progress tracking (not critical for long-term persistence)
+# repositories_store is now in SQLite via Repository model
 
 app = FastAPI(title="RepoMind - Codebase Archaeologist")
 api_router = APIRouter(prefix="/api")
@@ -41,6 +53,7 @@ class IngestRequest(BaseModel):
 class ChatRequest(BaseModel):
     user_message: str
     collection_name: str
+    session_id: Optional[str] = None
 
 class IngestResponse(BaseModel):
     status: str
@@ -68,7 +81,7 @@ def run_ingestion(job_id: str, repo_url: str, collection_name: str):
     update_job(job_id, status="cloning", progress_message="Cloning repository...")
     tmp_dir = None
     try:
-        tmp_dir = shallow_clone(repo_url)
+        tmp_dir = clone_repository(repo_url)
         update_job(job_id, status="parsing", progress_message="Parsing and chunking code files...")
 
         chunks, report = parse_repository(tmp_dir.name, repo_url, collection_name)
@@ -112,12 +125,13 @@ def run_ingestion(job_id: str, repo_url: str, collection_name: str):
             completed_at=datetime.now(timezone.utc).isoformat()
         )
 
-        repositories_store[collection_name] = {
-            **repositories_store.get(collection_name, {}),
-            "status": "completed",
-            "report": report,
-            "updated_at": datetime.now(timezone.utc).isoformat()
-        }
+        # PERSIST TO DB
+        db = next(get_db())
+        try:
+            save_repo(db, repo_url, collection_name, "completed", report)
+        finally:
+            db.close()
+            
         logger.info(f"Ingestion complete for {repo_url}: {report}")
 
     except Exception as e:
@@ -128,12 +142,12 @@ def run_ingestion(job_id: str, repo_url: str, collection_name: str):
             error=str(e),
             completed_at=datetime.now(timezone.utc).isoformat()
         )
-        repositories_store[collection_name] = {
-            **repositories_store.get(collection_name, {}),
-            "status": "failed",
-            "error": str(e),
-            "updated_at": datetime.now(timezone.utc).isoformat()
-        }
+        
+        db = next(get_db())
+        try:
+            save_repo(db, repo_url, collection_name, "failed")
+        finally:
+            db.close()
     finally:
         if tmp_dir:
             try:
@@ -159,14 +173,12 @@ async def ingest_repo(request: IngestRequest, background_tasks: BackgroundTasks)
 
     job_id = create_job(repo_url, collection_name)
 
-    repositories_store[collection_name] = {
-        "repo_url": repo_url,
-        "collection_name": collection_name,
-        "status": "ingesting",
-        "job_id": job_id,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "updated_at": datetime.now(timezone.utc).isoformat()
-    }
+    # Track repo in DB immediately
+    db = next(get_db())
+    try:
+        save_repo(db, repo_url, collection_name, "ingesting")
+    finally:
+        db.close()
 
     background_tasks.add_task(run_ingestion, job_id, repo_url, collection_name)
 
@@ -188,26 +200,131 @@ async def list_jobs():
     return get_all_jobs()
 
 @api_router.post("/chat")
-async def chat(request: ChatRequest):
+async def chat(request: ChatRequest, db: Session = Depends(get_db)):
     if not NVIDIA_API_KEY:
         return {"error": "NVIDIA API key not configured. Set NVIDIA_API_KEY in .env"}
 
+    # Handle session creation
+    # Enforce exactly one session per repository
+    existing_sessions = get_sessions_for_repo(db, request.collection_name)
+    if existing_sessions:
+        session_id = existing_sessions[0].id
+    else:
+        session = create_session(
+            db=db,
+            collection_name=request.collection_name,
+            first_message=request.user_message,
+        )
+        session_id = session.id
+
+    # Save user message
+    save_message(
+        db=db,
+        session_id=session_id,
+        collection_name=request.collection_name,
+        role="user",
+        content=request.user_message,
+    )
+
+    # Fetch chat history to pass to LLM (for conversational memory)
+    chat_messages_db = get_session_messages(db, session_id)
+    chat_history = [{"role": m.role, "content": m.content} for m in chat_messages_db]
+    
     try:
-        result = query_codebase(request.user_message, request.collection_name)
-        return result
+        result = query_codebase(request.user_message, request.collection_name, chat_history)
+        
+        # Save assistant response
+        save_message(
+            db=db,
+            session_id=session_id,
+            collection_name=request.collection_name,
+            role="assistant",
+            content=result["answer"],
+            intent=result.get("intent"),
+        )
+        
+        return {**result, "session_id": session_id}
     except Exception as e:
         logger.error(f"Chat error: {e}")
         return {"error": str(e)}
 
+@api_router.get("/chat/sessions")
+async def list_all_sessions(db: Session = Depends(get_db)):
+    sessions = get_all_sessions(db)
+    return {
+        "sessions": [
+            {
+                "session_id": s.id,
+                "collection_name": s.collection_name,
+                "title": s.title,
+                "created_at": s.created_at,
+                "updated_at": s.updated_at,
+            }
+            for s in sessions
+        ]
+    }
+
+@api_router.get("/chat/sessions/{collection_name}")
+async def list_repo_sessions(collection_name: str, db: Session = Depends(get_db)):
+    sessions = get_sessions_for_repo(db, collection_name)
+    return {
+        "collection_name": collection_name,
+        "sessions": [
+            {
+                "session_id": s.id,
+                "title": s.title,
+                "created_at": s.created_at,
+                "updated_at": s.updated_at,
+            }
+            for s in sessions
+        ]
+    }
+
+@api_router.get("/chat/history/{session_id}")
+async def get_chat_history(session_id: str, db: Session = Depends(get_db)):
+    messages = get_session_messages(db, session_id)
+    return {
+        "session_id": session_id,
+        "messages": [
+            {
+                "role": m.role,
+                "content": m.content,
+                "intent": m.intent,
+                "timestamp": m.timestamp,
+            }
+            for m in messages
+        ]
+    }
+
+@api_router.delete("/chat/session/{session_id}")
+async def remove_session(session_id: str, db: Session = Depends(get_db)):
+    delete_session(db, session_id)
+    return {"status": "deleted", "session_id": session_id}
+
 @api_router.get("/repositories")
-async def list_repositories():
-    return list(repositories_store.values())
+async def list_repositories(db: Session = Depends(get_db)):
+    repos = get_all_repos(db)
+    return [
+        {
+            "repo_url": r.repo_url,
+            "collection_name": r.collection_name,
+            "status": r.status,
+            "report": r.report,
+            "created_at": r.created_at,
+            "updated_at": r.updated_at
+        }
+        for r in repos
+    ]
 
 @api_router.delete("/repository/{collection_name}")
-async def delete_repository(collection_name: str):
+async def delete_repository(collection_name: str, db: Session = Depends(get_db)):
     store = get_vector_store()
-    store.delete_collection(collection_name)
-    repositories_store.pop(collection_name, None)
+    try:
+        store.delete_collection(collection_name)
+    except Exception:
+        pass # Might not exist in vector store
+    
+    delete_repo(db, collection_name)
     return {"status": "deleted", "collection_name": collection_name}
 
 # --- App Setup ---

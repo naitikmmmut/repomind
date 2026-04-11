@@ -26,6 +26,9 @@ temp_ui/
 .DS_Store
 Thumbs.db
 
+# Databases
+*.db
+
 # IDE
 .vscode/
 .idea/

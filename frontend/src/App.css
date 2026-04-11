@@ -47,6 +47,23 @@
     border-left: 2px solid hsl(var(--primary));
 }
 
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+}
+
+.group:hover .opacity-0 {
+    opacity: 1;
+}
+
 /* Main Content */
 .main-content {
     flex: 1;

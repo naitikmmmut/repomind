@@ -1,52 +1,87 @@
-# RepoMind: Codebase Archaeologist
+# RepoMind: Codebase Archaeologist 🏛️🔍
 
-A tool to ingest public GitHub repositories and ask intelligent codebase questions utilizing NVIDIA NIM, LangChain, ChromaDB, and FastAPI.
+**RepoMind** is a production-grade codebase analysis platform that transforms GitHub repositories into interactable knowledge bases. Unlike standard RAG tools, RepoMind is history-aware—it doesn't just know what the code *is*, it knows *why* it changed.
 
-## Project Structure
+![RepoMind Landing Page](https://raw.githubusercontent.com/naitikmmmut/repomind/main/screenshot.png) *(Placeholder for your actual screenshot link)*
 
-- `frontend/`: React app with Tailwind CSS styling
-- `backend/`: FastAPI backend providing API endpoints and background document ingestion
+---
 
-## Setup
+## 🚀 Key Features
 
-### Backend
+- **Semantic Commit Analysis:** Deep integration with `GitPython` to ingest full commit logs. Ask why a specific function was modified or track the evolution of a feature.
+- **ChatGPT-Style Conversational Memory:** Remembers context across messages. Ask follow-up questions seamlessly within a single window per repository.
+- **Multi-Vector Storage:** Flexibility to use **ChromaDB** for local development or **Pinecone** for production-scale deployments.
+- **Intelligent Intent Routing:** Automatically detects if you're asking about **Architecture**, **Bugs**, **Evolution (History)**, or **Feature Implementation** to provide tailored responses.
+- **Persistent Storage:** Built on a robust **SQLite + SQLAlchemy** backend. Your repositories, ingestion reports, and chat histories are saved permanently.
 
-1. Navigate to `backend` directory
-2. Create and activate a Virtual Environment
-```sh
+---
+
+## 🛠️ Technology Stack
+
+| Layer | Technology |
+|---|---|
+| **AI/LLM** | NVIDIA NIM (llama-3.1-70b), NVIDIA Embeddings |
+| **Backend** | FastAPI, SQLAlchemy, GitPython |
+| **Database** | SQLite (Metadata), ChromaDB/Pinecone (Vectors) |
+| **Frontend** | React, Tailwind CSS, Lucide Icons |
+| **Parsing** | Recursive code chunking with metadata tagging |
+
+---
+
+## 🏗️ Architecture
+
+```mermaid
+graph TD
+    A[GitHub Repo] -->|Full Clone| B[Ingestion Engine]
+    B -->|Parse| C[Code Chunks]
+    B -->|Git Log| D[Commit History]
+    C & D -->|NVIDIA Embeddings| E[Vector Store]
+    F[User Query] -->|Intent Router| G{Intent?}
+    G -->|Architecture| H[Architect Prompt]
+    G -->|History| I[Historian Prompt]
+    G -->|Bug| J[Debugger Prompt]
+    H & I & J -->|RAG| K[LLM Response]
+    K -->|Persist| L[(SQLite)]
+```
+
+---
+
+## 🏁 Getting Started
+
+### 1. Prerequisites
+- Python 3.9+
+- Node.js 18+
+- [NVIDIA NIM API Key](https://build.nvidia.com/)
+
+### 2. Backend Setup
+```bash
+cd backend
 python -m venv venv
-# Windows
-.\venv\Scripts\activate
-# Linux/Mac
-source venv/bin/activate
-```
-3. Install Dependencies
-```sh
+source venv/bin/activate  # .\venv\Scripts\activate on Windows
 pip install -r requirements.txt
-```
-4. Copy Environment Template
-```sh
 cp .env.example .env
 ```
-Update `.env` with your desired keys (`NVIDIA_API_KEY`, MongoDB info, etc.). Ensure MongoDB is running locally or provide a valid URI in `MONGO_URL`.
-5. Run the Server
-```sh
+Update your `.env` with:
+- `NVIDIA_API_KEY`: Your NVIDIA API key.
+- `ENV`: `development` (Chroma) or `production` (Pinecone).
+
+Run the server:
+```bash
 uvicorn server:app --reload
 ```
-Server runs on http://localhost:8000.
 
-### Frontend
-
-1. Navigate to the `frontend` directory.
-2. Ensure you have Node and NPM/Yarn installed.
-3. Install dependencies:
-```sh
+### 3. Frontend Setup
+```bash
+cd frontend
 npm install
-```
-4. Configure ENV
-Copy `.env.example` to `.env` if needed, `REACT_APP_BACKEND_URL` points to `http://localhost:8000`.
-5. Run the Frontend 
-```sh
 npm start
 ```
-Starts on http://localhost:3000.
+Open [http://localhost:3000](http://localhost:3000) to start your first excavation!
+
+---
+
+## 📜 License
+MIT License. See `LICENSE` for details.
+
+---
+*Built with ❤️ for developers who love diving deep into codebases.*

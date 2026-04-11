@@ -1,7 +1,7 @@
 from services.vector_store import get_vector_store
 from services.llm import get_embeddings, chat_completion
 from rag.intent_router import detect_intent
-from rag.prompts import EXPLAIN_PROMPT, BUG_PROMPT, ARCHITECTURE_PROMPT, GENERAL_PROMPT
+from rag.prompts import EXPLAIN_PROMPT, BUG_PROMPT, ARCHITECTURE_PROMPT, GENERAL_PROMPT, HISTORY_PROMPT
 from utils.logger import get_logger
 from typing import List
 
@@ -11,6 +11,7 @@ INTENT_TO_PROMPT = {
     "explain": EXPLAIN_PROMPT,
     "bug": BUG_PROMPT,
     "architecture": ARCHITECTURE_PROMPT,
+    "history": HISTORY_PROMPT,
     "general": GENERAL_PROMPT,
 }
 
@@ -24,7 +25,7 @@ def build_context(results: List[dict]) -> str:
         context_parts.append(f"--- File: {file_path} ({language}) ---\n{content}\n")
     return "\n".join(context_parts)
 
-def query_codebase(user_message: str, collection_name: str) -> dict:
+def query_codebase(user_message: str, collection_name: str, chat_history: List[dict] = None) -> dict:
     intent = detect_intent(user_message)
     logger.info(f"Detected intent: {intent} for query: {user_message[:80]}")
 
@@ -49,9 +50,14 @@ def query_codebase(user_message: str, collection_name: str) -> dict:
     system_prompt = INTENT_TO_PROMPT.get(intent, GENERAL_PROMPT).format(context=context)
 
     messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_message}
+        {"role": "system", "content": system_prompt}
     ]
+    
+    if chat_history:
+        for msg in chat_history[-10:]: # Pass the last 10 messages for context memory
+            messages.append({"role": msg["role"], "content": msg["content"]})
+    else:
+        messages.append({"role": "user", "content": user_message})
 
     answer = chat_completion(messages)
 

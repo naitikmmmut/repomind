@@ -14,12 +14,16 @@ INTENT_KEYWORDS = {
         "layout", "diagram", "overview", "folder", "module",
         "tech stack", "dependency", "flow", "how is.*organized"
     ],
+    "history": [
+        "when", "who", "changed", "modified", "last", "commit",
+        "author", "history", "introduced", "added", "removed", "why was"
+    ],
 }
 
 def detect_intent(query: str) -> str:
     query_lower = query.lower()
 
-    scores = {"explain": 0, "bug": 0, "architecture": 0}
+    scores = {intent: 0 for intent in INTENT_KEYWORDS.keys()}
 
     for intent, keywords in INTENT_KEYWORDS.items():
         for kw in keywords:

@@ -90,49 +90,48 @@ function Sidebar({ repos, selectedRepo, onSelectRepo, onNewRepo, onDeleteRepo, l
         </button>
       </div>
 
-      <div className="px-3 py-2">
-        <span className="overline">Repositories ({repos.length})</span>
-      </div>
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="px-3 py-2">
+          <span className="overline">Repositories ({repos.length})</span>
+        </div>
 
-      <div className="sidebar-repos">
-        {loading ? (
-          <div className="p-4 text-center">
-            <span className="font-mono text-xs text-slate-400">LOADING...</span>
-          </div>
-        ) : repos.length === 0 ? (
-          <div className="p-4 text-center">
-            <span className="font-mono text-xs text-slate-400">NO REPOS YET</span>
-          </div>
-        ) : (
-          repos.map((repo) => (
-            <div
-              key={repo.collection_name}
-              data-testid={`repo-item-${repo.collection_name}`}
-              className={`repo-item ${selectedRepo?.collection_name === repo.collection_name ? "active" : ""}`}
-              onClick={() => onSelectRepo(repo)}
-            >
-              <div className="flex-1 truncate">
-                <div className="truncate">{repo.collection_name}</div>
-                <div className="text-[10px] mt-1 opacity-60 normal-case tracking-normal truncate">
-                  {repo.repo_url}
+        <div className="sidebar-repos mb-4">
+          {loading ? (
+            <div className="p-4 text-center">
+              <span className="font-mono text-xs text-slate-400">LOADING...</span>
+            </div>
+          ) : repos.length === 0 ? (
+            <div className="p-4 text-center">
+              <span className="font-mono text-xs text-slate-400">NO REPOS YET</span>
+            </div>
+          ) : (
+            repos.map((repo) => (
+              <div
+                key={repo.collection_name}
+                data-testid={`repo-item-${repo.collection_name}`}
+                className={`repo-item ${selectedRepo?.collection_name === repo.collection_name ? "active" : ""}`}
+                onClick={() => onSelectRepo(repo)}
+              >
+                <div className="flex-1 truncate">
+                  <div className="truncate font-bold text-[11px]">{repo.collection_name}</div>
+                </div>
+                <div className="flex items-center gap-2 ml-2 shrink-0">
+                  <StatusDot status={repo.status} />
+                  <button
+                    data-testid={`btn-delete-repo-${repo.collection_name}`}
+                    className="btn-destructive !p-1 !text-[8px] !h-5 !w-8"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteRepo(repo.collection_name);
+                    }}
+                  >
+                    DEL
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center gap-2 ml-2 shrink-0">
-                <StatusDot status={repo.status} />
-                <button
-                  data-testid={`btn-delete-repo-${repo.collection_name}`}
-                  className="btn-destructive !p-1 !text-[9px]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteRepo(repo.collection_name);
-                  }}
-                >
-                  DEL
-                </button>
-              </div>
-            </div>
-          ))
-        )}
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
@@ -472,6 +471,7 @@ function App() {
   const [reposLoading, setReposLoading] = useState(true);
   const [jobStatus, setJobStatus] = useState(null);
   const [currentJobId, setCurrentJobId] = useState(null);
+  const [currentSessionId, setCurrentSessionId] = useState(null);
   const pollRef = useRef(null);
 
   const fetchRepos = useCallback(async () => {
@@ -537,12 +537,46 @@ function App() {
     }
   };
 
+  const fetchSessions = useCallback(async (collectionName) => {
+    try {
+      const res = await axios.get(`${API}/chat/sessions/${collectionName}`);
+      if (res.data.sessions && res.data.sessions.length > 0) {
+        const sessionId = res.data.sessions[0].session_id;
+        setCurrentSessionId(sessionId);
+        
+        setChatLoading(true);
+        const historyRes = await axios.get(`${API}/chat/history/${sessionId}`);
+        const formattedMessages = historyRes.data.messages.map(m => ({
+          ...m,
+          role: m.role === "assistant" ? "ai" : m.role
+        }));
+        setMessages(formattedMessages);
+        setChatLoading(false);
+      }
+    } catch (e) {
+      console.error("Failed to fetch sessions/history:", e);
+      setChatLoading(false);
+    }
+  }, []);
+
   const handleSelectRepo = (repo) => {
     if (repo.status !== "completed") return;
+    
+    const isSameRepo = selectedRepo?.collection_name === repo.collection_name;
     setSelectedRepo(repo);
     setView("chat");
-    setMessages([]);
+    
+    // Only clear messages if we're switching to a DIFFERENT repo
+    if (!isSameRepo) {
+      setMessages([]);
+      setCurrentSessionId(null);
+      fetchSessions(repo.collection_name);
+    } else if (messages.length === 0) {
+      // If same repo but messages are empty (e.g. after refresh), fetch
+      fetchSessions(repo.collection_name);
+    }
   };
+
 
   const handleDeleteRepo = async (collectionName) => {
     try {
@@ -567,6 +601,7 @@ function App() {
       const res = await axios.post(`${API}/chat`, {
         user_message: text,
         collection_name: selectedRepo.collection_name,
+        session_id: currentSessionId || undefined
       });
 
       if (res.data.error) {
@@ -575,6 +610,11 @@ function App() {
           { role: "ai", content: `Error: ${res.data.error}`, sources: [] },
         ]);
       } else {
+        // If it was a new session, update state
+        if (!currentSessionId && res.data.session_id) {
+          setCurrentSessionId(res.data.session_id);
+        }
+
         setMessages((prev) => [
           ...prev,
           {

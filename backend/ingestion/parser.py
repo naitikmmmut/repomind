@@ -1,5 +1,6 @@
 import os
-from typing import List, Tuple
+import git
+from typing import List, Tuple, Dict
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
 from utils.file_filters import ALLOWED_EXTENSIONS, SKIP_DIRS, MAX_FILE_SIZE
 from utils.logger import get_logger
@@ -21,6 +22,24 @@ EXTENSION_TO_LANGUAGE = {
     '.rb': Language.RUBY,
     '.md': Language.MARKDOWN,
 }
+
+def get_commit_history(repo_path: str, file_path: str, max_count: int = 100) -> List[Dict]:
+    """Extracts commit history for a specific file using GitPython."""
+    try:
+        repo = git.Repo(repo_path)
+        commits = []
+        # Use paths=file_path to get commits that affected this file
+        for commit in repo.iter_commits(paths=file_path, max_count=max_count):
+            commits.append({
+                "hash": commit.hexsha[:8],
+                "author": commit.author.name,
+                "date": commit.committed_datetime.isoformat(),
+                "message": commit.message.strip(),
+            })
+        return commits
+    except Exception as e:
+        logger.warning(f"Could not extract commit history for {file_path}: {e}")
+        return []
 
 def parse_repository(repo_path: str, repo_url: str, collection_name: str) -> Tuple[List[dict], dict]:
     chunks = []
@@ -87,6 +106,22 @@ def parse_repository(repo_path: str, repo_url: str, collection_name: str) -> Tup
                     })
 
                 report["files_processed"] += 1
+
+                # --- Extract and add commit history chunks ---
+                history = get_commit_history(repo_path, relative_path)
+                for entry in history:
+                    chunks.append({
+                        "content": f"File: {relative_path}\nCommit: {entry['message']}\nAuthor: {entry['author']}\nDate: {entry['date']}",
+                        "metadata": {
+                            "type": "commit_history",
+                            "file_path": relative_path,
+                            "repo_url": repo_url,
+                            "collection_name": collection_name,
+                            "commit_hash": entry["hash"],
+                            "author": entry["author"],
+                            "date": entry["date"]
+                        }
+                    })
 
             except Exception as e:
                 logger.warning(f"Error processing {relative_path}: {e}")
