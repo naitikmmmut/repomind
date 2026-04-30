@@ -95,12 +95,11 @@ def run_ingestion(job_id: str, repo_url: str, collection_name: str):
                 report={**report, "message": "No code files found"},
                 completed_at=datetime.now(timezone.utc).isoformat()
             )
-            repositories_store[collection_name] = {
-                **repositories_store.get(collection_name, {}),
-                "status": "completed",
-                "report": report,
-                "updated_at": datetime.now(timezone.utc).isoformat()
-            }
+            db = next(get_db())
+            try:
+                save_repo(db, repo_url, collection_name, "completed", report)
+            finally:
+                db.close()
             return
 
         update_job(job_id, status="embedding",
