@@ -101,7 +101,7 @@ def query_codebase(db: Session, user_message: str, collection_name: str, chat_hi
         code = re.sub(r'(?<!\n)\s+([A-Za-z0-9_]+\[.*?\]\s*(?:-->|->|-.->))', r'\n\1', code)
         code = re.sub(r'(?<!\n)\s+(end\b)', r'\n\1', code)
         
-        answer = answer.replace(block_match.group(0), f"```mermaid\n{code.strip()}\n```")
+        answer = answer.replace(block_match.group(0), f"\n\n```mermaid\n{code.strip()}\n```\n\n")
     else:
         # Fallback to the single-line extraction logic
         match = re.search(r'(mermaid\s+(?:sequenceDiagram|graph|flowchart|classDiagram).*?)(?=\s+(?:This |Here |The |Note:|Please |Based |In this )|$)', answer, re.IGNORECASE)
