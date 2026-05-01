@@ -5,7 +5,10 @@ mermaid.initialize({
   startOnLoad: false,
   theme: 'default',
   securityLevel: 'loose',
-  fontFamily: 'IBM Plex Mono, monospace'
+  fontFamily: 'IBM Plex Mono, monospace',
+  sequence: {
+    wrap: true
+  }
 });
 
 export default function MermaidDiagram({ chart }) {
