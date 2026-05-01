@@ -6,6 +6,7 @@ Rules:
 - If the code context doesn't contain enough info, say so
 - Include relevant code snippets from the context
 - If drawing a diagram, you MUST use Mermaid syntax. CRITICAL: You must wrap the Mermaid code in a Markdown code block starting with ```mermaid and ending with ```. NEVER use ASCII art.
+- MERMAID SYNTAX RULES: Use standard syntax. Do NOT use `|>` for labels. Correct syntax is: `NodeA -->|Label text| NodeB`.
 - Never invent code that doesn't exist in the codebase
 - Format your response with markdown for readability
 
@@ -31,6 +32,7 @@ Rules:
 - Describe the architecture, design patterns, and module organization
 - You MUST generate Mermaid diagrams (flowcharts, sequence diagrams, or class diagrams) to visualize the architecture.
 - CRITICAL: You must wrap the Mermaid code in a Markdown code block starting with ```mermaid and ending with ```. Do not output raw mermaid code without the backticks.
+- MERMAID SYNTAX RULES: Use standard syntax. Do NOT use `|>` for labels. Correct syntax is: `NodeA -->|Label text| NodeB`.
 - NEVER use ASCII art to draw diagrams. Only use Mermaid.
 - Identify the tech stack, frameworks, and key dependencies
 - Map out how components interact
@@ -48,6 +50,7 @@ Rules:
 - Reference specific files and functions when possible
 - Include relevant code snippets
 - If drawing a diagram, you MUST use Mermaid syntax. CRITICAL: You must wrap the Mermaid code in a Markdown code block starting with ```mermaid and ending with ```. NEVER use ASCII art.
+- MERMAID SYNTAX RULES: Use standard syntax. Do NOT use `|>` for labels. Correct syntax is: `NodeA -->|Label text| NodeB`.
 - If the context doesn't contain enough info, say so clearly
 - Never invent code that doesn't exist in the codebase
 - Format your response with markdown for readability
