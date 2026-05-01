@@ -92,6 +92,9 @@ def query_codebase(db: Session, user_message: str, collection_name: str, chat_hi
         raw_code = block_match.group(1)
         # Apply line breaks to the code
         code = raw_code
+        # Strip hallucinated backticks inside the code
+        code = code.replace('```', '')
+        
         for kw in ['participant', 'actor', 'Note', 'loop', 'alt', 'else', 'opt', 'par', 'rect', 'critical', 'activate', 'deactivate', 'style', 'classDef', 'subgraph', 'direction']:
             code = re.sub(r'(?<!\n)\s+(' + kw + r'\b)', r'\n\1', code)
         code = re.sub(r'(?<!\n)\s+([A-Za-z0-9_]+\s*(?:->>|-->|-->>|->))', r'\n\1', code)
@@ -108,6 +111,9 @@ def query_codebase(db: Session, user_message: str, collection_name: str, chat_hi
             prose = answer[match.end():].strip()
             
             code = re.sub(r'^mermaid\s+', '', raw_block, flags=re.IGNORECASE)
+            
+            # Strip hallucinated backticks
+            code = code.replace('```', '')
             
             # Break lines before keywords
             for kw in ['participant', 'actor', 'Note', 'loop', 'alt', 'else', 'opt', 'par', 'rect', 'critical', 'activate', 'deactivate', 'style', 'classDef', 'subgraph', 'direction']:
