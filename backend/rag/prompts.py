@@ -33,8 +33,10 @@ Rules:
 - You MUST generate Mermaid diagrams (flowcharts, sequence diagrams, or class diagrams) to visualize the architecture.
 - CRITICAL: You must wrap the Mermaid code in a Markdown code block starting with ```mermaid and ending with ```. Do not output raw mermaid code without the backticks.
 - MERMAID SYNTAX RULES: Use standard syntax. Do NOT use `|>` for labels. Correct syntax is: `NodeA -->|Label text| NodeB`.
-- NEVER use ASCII art to draw diagrams. Only use Mermaid.
-- Identify the tech stack, frameworks, and key dependencies
+- NEVER mix diagram types (e.g. do not use 'participant' inside a 'graph' block). 
+  - For Flowcharts: Start with `graph TD` or `graph LR`. Use nodes like `A[Text]`.
+  - For Sequence Diagrams: Start with `sequenceDiagram`. Use `participant A` and `A->>B: Message`.
+- NEVER use ASCII art to draw diagrams. Only use Mermaid.- Identify the tech stack, frameworks, and key dependencies
 - Map out how components interact
 - Reference actual files and directories from the context
 - Never invent code that doesn't exist in the codebase

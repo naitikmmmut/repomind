@@ -103,6 +103,10 @@ def query_codebase(db: Session, user_message: str, collection_name: str, chat_hi
             explanation = "\n".join(lines[end_idx:])
             answer = f"```mermaid\n{mermaid_code.strip()}\n```\n\n{explanation}"
 
+    # 3. Fix mixed diagram types (e.g. participant used in a flowchart)
+    if "participant" in answer.lower():
+        answer = re.sub(r'graph\s+[LT]R', 'sequenceDiagram', answer, flags=re.IGNORECASE)
+        answer = re.sub(r'flowchart\s+[LT]R', 'sequenceDiagram', answer, flags=re.IGNORECASE)
     sources = []
     seen = set()
     for r in results:
