@@ -7,10 +7,20 @@ const MessageContent = lazy(() => import("./MarkdownRenderer"));
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+const HamburgerIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="12" x2="21" y2="12"></line>
+    <line x1="3" y1="6" x2="21" y2="6"></line>
+    <line x1="3" y1="18" x2="21" y2="18"></line>
+  </svg>
+);
+
 // --- Sidebar Component ---
-function Sidebar({ repos, selectedRepo, onSelectRepo, onNewRepo, onDeleteRepo, loading }) {
+function Sidebar({ repos, selectedRepo, onSelectRepo, onNewRepo, onDeleteRepo, loading, isOpen, onClose }) {
   return (
-    <div className="sidebar" data-testid="sidebar">
+    <>
+      {isOpen && <div className="sidebar-overlay md:hidden" onClick={onClose} />}
+      <div className={`sidebar ${isOpen ? 'open' : ''}`} data-testid="sidebar">
       <div className="sidebar-header">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-[#002FA7] flex items-center justify-center">
@@ -77,6 +87,7 @@ function Sidebar({ repos, selectedRepo, onSelectRepo, onNewRepo, onDeleteRepo, l
         </div>
       </div>
     </div>
+  </>
   );
 }
 
@@ -95,7 +106,7 @@ function StatusDot({ status }) {
 }
 
 // --- Ingest View ---
-function IngestView({ onIngestStart, jobStatus, onBack }) {
+function IngestView({ onIngestStart, jobStatus, onBack, onToggleSidebar }) {
   const [repoUrl, setRepoUrl] = useState("");
   const [collectionName, setCollectionName] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -140,9 +151,14 @@ function IngestView({ onIngestStart, jobStatus, onBack }) {
   return (
     <main className="main-content" data-testid="ingest-view">
       <div className="border-b border-border p-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight font-[Chivo]">Ingest Repository</h2>
-          <p className="text-sm text-slate-600 mt-1">Paste a public GitHub repository URL to analyze its codebase</p>
+        <div className="flex items-center gap-3">
+          <button className="md:hidden text-slate-400" onClick={onToggleSidebar}>
+            <HamburgerIcon />
+          </button>
+          <div>
+            <h2 className="text-xl font-bold tracking-tight font-[Chivo]">Ingest Repository</h2>
+            <p className="text-sm text-slate-600 mt-1">Paste a public GitHub repository URL to analyze its codebase</p>
+          </div>
         </div>
         <button className="btn-secondary text-xs" onClick={onBack} data-testid="btn-back">
           BACK
@@ -229,7 +245,7 @@ function IngestView({ onIngestStart, jobStatus, onBack }) {
 }
 
 // --- Chat View ---
-function ChatView({ repo, messages, onSendMessage, loading }) {
+function ChatView({ repo, messages, onSendMessage, loading, onToggleSidebar }) {
   const [input, setInput] = useState("");
   const messagesEndRef = useRef(null);
 
@@ -258,6 +274,9 @@ function ChatView({ repo, messages, onSendMessage, loading }) {
     <main className="main-content" data-testid="chat-view">
       <div className="border-b border-border p-4">
         <div className="flex items-center gap-3">
+          <button className="md:hidden text-slate-400" onClick={onToggleSidebar}>
+            <HamburgerIcon />
+          </button>
           <div className="w-6 h-6 bg-[#002FA7] flex items-center justify-center">
             <span className="text-white font-mono text-[9px] font-bold">Q</span>
           </div>
@@ -372,10 +391,18 @@ function ChatView({ repo, messages, onSendMessage, loading }) {
 }
 
 // --- Empty State ---
-function EmptyState({ onNewRepo }) {
+function EmptyState({ onNewRepo, onToggleSidebar }) {
   return (
     <main className="main-content" data-testid="empty-state">
-      <div className="empty-state">
+      <div className="p-4 md:hidden border-b border-border absolute top-0 left-0 right-0 bg-background z-10 flex items-center gap-3">
+        <button className="text-slate-400" onClick={onToggleSidebar}>
+          <HamburgerIcon />
+        </button>
+        <div className="w-6 h-6 bg-[#002FA7] flex items-center justify-center">
+          <span className="text-white font-mono text-[9px] font-bold">RM</span>
+        </div>
+      </div>
+      <div className="empty-state mt-16 md:mt-0">
         <div className="w-16 h-16 bg-[#002FA7] flex items-center justify-center mb-6">
           <span className="text-white font-mono text-2xl font-bold">RM</span>
         </div>
@@ -417,6 +444,7 @@ function App() {
   const [jobStatus, setJobStatus] = useState(null);
   const [currentJobId, setCurrentJobId] = useState(null);
   const [currentSessionId, setCurrentSessionId] = useState(null);
+  const [isSidebarMobileOpen, setIsSidebarMobileOpen] = useState(false);
   const pollRef = useRef(null);
 
   const fetchRepos = useCallback(async () => {
@@ -466,6 +494,7 @@ function App() {
     setView("ingest");
     setJobStatus(null);
     setCurrentJobId(null);
+    setIsSidebarMobileOpen(false);
   };
 
   const handleIngestStart = async (repoUrl, collectionName) => {
@@ -510,6 +539,7 @@ function App() {
     const isSameRepo = selectedRepo?.collection_name === repo.collection_name;
     setSelectedRepo(repo);
     setView("chat");
+    setIsSidebarMobileOpen(false);
     
     // Only clear messages if we're switching to a DIFFERENT repo
     if (!isSameRepo) {
@@ -593,13 +623,16 @@ function App() {
         onNewRepo={handleNewRepo}
         onDeleteRepo={handleDeleteRepo}
         loading={reposLoading}
+        isOpen={isSidebarMobileOpen}
+        onClose={() => setIsSidebarMobileOpen(false)}
       />
 
-      {view === "empty" && <EmptyState onNewRepo={handleNewRepo} />}
+      {view === "empty" && <EmptyState onNewRepo={handleNewRepo} onToggleSidebar={() => setIsSidebarMobileOpen(true)} />}
       {view === "ingest" && (
         <IngestView
           onIngestStart={handleIngestStart}
           jobStatus={jobStatus}
+          onToggleSidebar={() => setIsSidebarMobileOpen(true)}
           onBack={() => {
             setView(selectedRepo ? "chat" : "empty");
             setJobStatus(null);
@@ -613,6 +646,7 @@ function App() {
           messages={messages}
           onSendMessage={handleSendMessage}
           loading={chatLoading}
+          onToggleSidebar={() => setIsSidebarMobileOpen(true)}
         />
       )}
     </div>
