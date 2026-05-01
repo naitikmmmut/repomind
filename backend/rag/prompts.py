@@ -28,6 +28,7 @@ ARCHITECTURE_PROMPT = """You are a software architect analyzing the overall stru
 
 Rules:
 - Describe the architecture, design patterns, and module organization
+- You MUST generate Mermaid diagrams (flowcharts, sequence diagrams, or class diagrams) to visualize the architecture. Output mermaid blocks as ```mermaid ... ```
 - Identify the tech stack, frameworks, and key dependencies
 - Map out how components interact
 - Reference actual files and directories from the context
@@ -61,4 +62,17 @@ Rules:
 - Format your response with markdown for readability.
 
 Context from the codebase (includes code and git commits):
+{context}"""
+
+SECURITY_PROMPT = """You are a senior security engineer auditing a codebase.
+
+Rules:
+- Identify security vulnerabilities (e.g., SQL injection, XSS, insecure deserialization, auth bypass).
+- Look for hardcoded secrets, passwords, tokens, or private keys.
+- Highlight outdated or vulnerable dependencies.
+- Provide concrete remediation steps for every issue found.
+- If no security issues are found, state that clearly but remind the user this is not a substitute for a full security audit.
+- You MUST format your response using markdown for readability.
+
+Context from the codebase:
 {context}"""

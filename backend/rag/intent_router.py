@@ -5,9 +5,13 @@ INTENT_KEYWORDS = {
         "show me", "understand", "clarify", "detail"
     ],
     "bug": [
-        "bug", "issue", "error", "problem", "fix", "vulnerability",
-        "security", "wrong", "broken", "crash", "fail", "leak",
+        "bug", "issue", "error", "problem", "fix", 
+        "wrong", "broken", "crash", "fail", "leak",
         "race condition", "null", "exception", "antipattern"
+    ],
+    "security": [
+        "security", "vulnerability", "hack", "exploit",
+        "secret", "password", "token", "audit", "injection"
     ],
     "architecture": [
         "architecture", "structure", "design", "pattern", "organize",

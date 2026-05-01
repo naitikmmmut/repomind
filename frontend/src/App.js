@@ -156,8 +156,8 @@ function EmptyState({ onNewRepo, onToggleSidebar }) {
         <div className="mt-12 grid grid-cols-3 gap-8 max-w-lg">
           {[
             { label: "EXPLAIN", desc: "Understand any function or module" },
-            { label: "DEBUG", desc: "Find bugs and security issues" },
-            { label: "ARCHITECT", desc: "Analyze project structure" },
+            { label: "SECURITY", desc: "Run automated security scanning" },
+            { label: "ARCHITECT", desc: "Analyze and visualize architecture" },
           ].map((item) => (
             <div key={item.label} className="text-center">
               <div className="overline mb-1 text-[#001D66]">{item.label}</div>

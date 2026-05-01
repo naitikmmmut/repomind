@@ -1,9 +1,11 @@
 from services.vector_store import get_vector_store
 from services.llm import get_embeddings, chat_completion
 from rag.intent_router import detect_intent
-from rag.prompts import EXPLAIN_PROMPT, BUG_PROMPT, ARCHITECTURE_PROMPT, GENERAL_PROMPT, HISTORY_PROMPT
+from rag.prompts import EXPLAIN_PROMPT, BUG_PROMPT, ARCHITECTURE_PROMPT, GENERAL_PROMPT, HISTORY_PROMPT, SECURITY_PROMPT
 from utils.logger import get_logger
 from typing import List
+from sqlalchemy.orm import Session
+from db.chat_store import get_repo_files_by_paths
 
 logger = get_logger(__name__)
 
@@ -12,20 +14,34 @@ INTENT_TO_PROMPT = {
     "bug": BUG_PROMPT,
     "architecture": ARCHITECTURE_PROMPT,
     "history": HISTORY_PROMPT,
+    "security": SECURITY_PROMPT,
     "general": GENERAL_PROMPT,
 }
 
-def build_context(results: List[dict]) -> str:
+def build_context(results: List[dict], db: Session, collection_name: str) -> str:
     context_parts = []
+    file_paths = set()
     for r in results:
         meta = r.get("metadata", {})
-        file_path = meta.get("file_path", "unknown")
-        language = meta.get("language", "")
-        content = r.get("content", "")
-        context_parts.append(f"--- File: {file_path} ({language}) ---\n{content}\n")
+        fp = meta.get("file_path")
+        if fp:
+            file_paths.add(fp)
+
+    if file_paths:
+        repo_files = get_repo_files_by_paths(db, collection_name, list(file_paths))
+        for rf in repo_files:
+            context_parts.append(f"--- Full File: {rf.file_path} ---\n{rf.content}\n")
+
+    # Also include commit history chunks if they are retrieved
+    for r in results:
+        meta = r.get("metadata", {})
+        if meta.get("type") == "commit_history":
+            content = r.get("content", "")
+            context_parts.append(f"--- Git Commit History ---\n{content}\n")
+
     return "\n".join(context_parts)
 
-def query_codebase(user_message: str, collection_name: str, chat_history: List[dict] = None) -> dict:
+def query_codebase(db: Session, user_message: str, collection_name: str, chat_history: List[dict] = None) -> dict:
     intent = detect_intent(user_message)
     logger.info(f"Detected intent: {intent} for query: {user_message[:80]}")
 
@@ -46,7 +62,7 @@ def query_codebase(user_message: str, collection_name: str, chat_history: List[d
             "collection_name": collection_name
         }
 
-    context = build_context(results)
+    context = build_context(results, db, collection_name)
     system_prompt = INTENT_TO_PROMPT.get(intent, GENERAL_PROMPT).format(context=context)
 
     messages = [

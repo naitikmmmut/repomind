@@ -43,6 +43,15 @@ class ChatSession(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+class RepositoryFile(Base):
+    __tablename__ = "repository_files"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    collection_name = Column(String, index=True)
+    file_path = Column(String, index=True)
+    content = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 def create_tables():
     Base.metadata.create_all(bind=engine)
 

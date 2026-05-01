@@ -28,7 +28,8 @@ from db.chat_store import (
     create_session, save_message,
     get_session_messages, get_sessions_for_repo,
     get_all_sessions, delete_session,
-    save_repo, get_all_repos, delete_repo
+    save_repo, get_all_repos, delete_repo,
+    save_repo_file
 )
 
 # Initialize database tables on startup
@@ -84,7 +85,7 @@ def run_ingestion(job_id: str, repo_url: str, collection_name: str):
         tmp_dir = clone_repository(repo_url)
         update_job(job_id, status="parsing", progress_message="Parsing and chunking code files...")
 
-        chunks, report = parse_repository(tmp_dir.name, repo_url, collection_name)
+        chunks, files_content, report = parse_repository(tmp_dir.name, repo_url, collection_name)
         update_job(job_id, status="parsing_complete",
                    progress_message=f"Parsed {report['files_processed']} files into {report['chunks_created']} chunks")
 
@@ -128,6 +129,10 @@ def run_ingestion(job_id: str, repo_url: str, collection_name: str):
         db = next(get_db())
         try:
             save_repo(db, repo_url, collection_name, "completed", report)
+            # Save all files for CAG
+            for file_path, content in files_content.items():
+                save_repo_file(db, collection_name, file_path, content)
+            db.commit()
         finally:
             db.close()
             
@@ -230,7 +235,7 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
     chat_history = [{"role": m.role, "content": m.content} for m in chat_messages_db]
     
     try:
-        result = query_codebase(request.user_message, request.collection_name, chat_history)
+        result = query_codebase(db, request.user_message, request.collection_name, chat_history)
         
         # Save assistant response
         save_message(

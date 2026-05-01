@@ -41,8 +41,9 @@ def get_commit_history(repo_path: str, file_path: str, max_count: int = 100) -> 
         logger.warning(f"Could not extract commit history for {file_path}: {e}")
         return []
 
-def parse_repository(repo_path: str, repo_url: str, collection_name: str) -> Tuple[List[dict], dict]:
+def parse_repository(repo_path: str, repo_url: str, collection_name: str) -> Tuple[List[dict], Dict[str, str], dict]:
     chunks = []
+    files_content = {}
     report = {
         "files_processed": 0,
         "chunks_created": 0,
@@ -74,6 +75,8 @@ def parse_repository(repo_path: str, repo_url: str, collection_name: str) -> Tup
                 if not content.strip():
                     report["ignored_files_count"] += 1
                     continue
+                    
+                files_content[relative_path] = content
 
                 language = EXTENSION_TO_LANGUAGE.get(ext)
                 lang_name = language.value if language else "text"
@@ -130,4 +133,4 @@ def parse_repository(repo_path: str, repo_url: str, collection_name: str) -> Tup
     report["chunks_created"] = len(chunks)
     report["languages_detected"] = list(report["languages_detected"])
 
-    return chunks, report
+    return chunks, files_content, report

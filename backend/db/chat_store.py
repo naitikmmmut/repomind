@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from db.database import ChatMessage, ChatSession, Repository
+from db.database import ChatMessage, ChatSession, Repository, RepositoryFile
 from datetime import datetime, timezone
 import uuid
 
@@ -114,6 +114,24 @@ def delete_repo(db: Session, collection_name: str):
     # Delete related chat history first
     db.query(ChatMessage).filter(ChatMessage.collection_name == collection_name).delete()
     db.query(ChatSession).filter(ChatSession.collection_name == collection_name).delete()
+    # Delete related files
+    db.query(RepositoryFile).filter(RepositoryFile.collection_name == collection_name).delete()
     # Delete repo
     db.query(Repository).filter(Repository.collection_name == collection_name).delete()
     db.commit()
+
+def save_repo_file(db: Session, collection_name: str, file_path: str, content: str):
+    """Saves the full content of a file for CAG."""
+    repo_file = RepositoryFile(
+        collection_name=collection_name,
+        file_path=file_path,
+        content=content
+    )
+    db.add(repo_file)
+
+def get_repo_files_by_paths(db: Session, collection_name: str, file_paths: list[str]) -> list[RepositoryFile]:
+    """Retrieves full file contents by their paths."""
+    return db.query(RepositoryFile).filter(
+        RepositoryFile.collection_name == collection_name,
+        RepositoryFile.file_path.in_(file_paths)
+    ).all()
