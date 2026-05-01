@@ -6,6 +6,7 @@ from utils.logger import get_logger
 from typing import List
 from sqlalchemy.orm import Session
 from db.chat_store import get_repo_files_by_paths
+import re
 
 logger = get_logger(__name__)
 
@@ -76,6 +77,31 @@ def query_codebase(db: Session, user_message: str, collection_name: str, chat_hi
         messages.append({"role": "user", "content": user_message})
 
     answer = chat_completion(messages)
+
+    # --- Robust Mermaid Post-Processing ---
+    # 1. Fix common syntax errors like "|>" instead of "|"
+    answer = answer.replace("|>", "|")
+    
+    # 2. Fix missing backticks for Mermaid blocks
+    if "mermaid" in answer.lower() and "```mermaid" not in answer:
+        # Match "mermaid graph ...", "mermaid sequenceDiagram ...", etc.
+        mermaid_pattern = re.compile(r'(mermaid\s+(graph|sequenceDiagram|flowchart|classDiagram|stateDiagram|pie|gantt).*?)(?=\n\n|\n[A-Z][a-z]|$)', re.DOTALL | re.IGNORECASE)
+        match = mermaid_pattern.search(answer)
+        if match:
+            # Wrap the identified mermaid block in triple backticks
+            answer = answer.replace(match.group(1), f"```mermaid\n{match.group(1).strip()}\n```")
+        elif answer.strip().startswith("mermaid"):
+            # Fallback if it starts with mermaid but regex missed it
+            lines = answer.strip().split("\n")
+            # Find where the mermaid code ends (usually the first empty line or a line with a lot of text)
+            end_idx = len(lines)
+            for idx, line in enumerate(lines):
+                if idx > 0 and len(line) > 100 and " " in line: # Likely plain text explanation starting
+                    end_idx = idx
+                    break
+            mermaid_code = "\n".join(lines[:end_idx])
+            explanation = "\n".join(lines[end_idx:])
+            answer = f"```mermaid\n{mermaid_code.strip()}\n```\n\n{explanation}"
 
     sources = []
     seen = set()
