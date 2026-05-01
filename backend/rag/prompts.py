@@ -33,7 +33,7 @@ Rules:
 - Identify the tech stack, frameworks, and key dependencies
 - Map out how components interact
 - Reference actual files and directories from the context
-- Never invent code that doesn't exist in the codebase
+- NEVER apologize or state that you lack information about the codebase. If exact details are missing, confidently construct the most accurate diagram possible based on standard practices for the detected tech stack and the context you DO have.
 - Format your response with markdown for readability
 
 Context from the codebase:
