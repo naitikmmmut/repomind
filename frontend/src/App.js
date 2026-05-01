@@ -189,7 +189,7 @@ function App() {
       const data = await apiGet(`${API}/repositories`);
       setRepos(data);
     } catch (e) {
-      console.error("Failed to fetch repos:", e);
+      console.warn("Failed to fetch repos:", e.message);
     } finally {
       setReposLoading(false);
     }
@@ -215,7 +215,7 @@ function App() {
           fetchRepos();
         }
       } catch (e) {
-        console.error("Poll error:", e);
+        console.warn("Poll error:", e.message);
       }
     };
 
@@ -243,7 +243,7 @@ function App() {
       setCurrentJobId(data.job_id);
       setJobStatus({ status: "queued", progress_message: "Job queued" });
     } catch (e) {
-      console.error("Ingest error:", e);
+      console.warn("Ingest error:", e.message);
       setJobStatus({ status: "failed", error: e.data?.detail || e.message });
     }
   };
@@ -265,7 +265,7 @@ function App() {
         setChatLoading(false);
       }
     } catch (e) {
-      console.error("Failed to fetch sessions/history:", e);
+      console.warn("Failed to fetch sessions/history:", e.message);
       setChatLoading(false);
     }
   }, []);
@@ -299,7 +299,7 @@ function App() {
         setView("empty");
       }
     } catch (e) {
-      console.error("Delete error:", e);
+      console.warn("Delete error:", e.message);
     }
   };
 
