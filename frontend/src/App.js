@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback, Suspense, lazy } from "react";
 import "./App.css";
 import axios from "axios";
+import EmptyState from "./EmptyState";
 
-const EmptyState = lazy(() => import("./EmptyState"));
 const IngestView = lazy(() => import("./IngestView"));
 const ChatView = lazy(() => import("./ChatView"));
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -286,8 +286,8 @@ function App() {
         loading={reposLoading}
       />
 
+      {view === "empty" && <EmptyState onNewRepo={handleNewRepo} />}
       <Suspense fallback={<div className="flex-1 flex items-center justify-center"><div className="animate-pulse text-slate-500 font-mono text-xs">Loading...</div></div>}>
-        {view === "empty" && <EmptyState onNewRepo={handleNewRepo} />}
         {view === "ingest" && (
           <IngestView
             onIngestStart={handleIngestStart}
