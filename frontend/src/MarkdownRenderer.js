@@ -1,7 +1,49 @@
 import ReactMarkdown from "react-markdown";
 import MermaidDiagram from "./MermaidDiagram";
 
+/**
+ * Preprocess LLM output to wrap raw mermaid code in proper markdown code fences.
+ * The LLM sometimes outputs "mermaid\nsequenceDiagram\n..." without backticks.
+ * This detects that pattern and wraps it so ReactMarkdown renders it as a code block.
+ */
+function preprocessContent(text) {
+  if (!text) return text;
+
+  // If the content already has properly fenced mermaid blocks, leave it alone
+  if (text.includes("```mermaid")) return text;
+
+  // Detect raw mermaid code: lines starting with diagram-type keywords
+  // Pattern: "mermaid" on its own or followed by a diagram type, then diagram content
+  const diagramTypes = [
+    'sequenceDiagram', 'graph', 'flowchart', 'classDiagram',
+    'stateDiagram', 'pie', 'gantt', 'erDiagram', 'journey'
+  ];
+
+  const diagramKeywords = diagramTypes.join('|');
+
+  // Match "mermaid\n<diagramType>..." or "mermaid <diagramType>..."
+  // Capture everything until a double newline followed by prose text (sentence-like)
+  const rawMermaidPattern = new RegExp(
+    `(mermaid\\s+(?:${diagramKeywords})` +
+    `[\\s\\S]*?)` +  // greedy capture of mermaid code
+    `(?=\\n\\n(?:This |Here |The |Note |Please |Source|Ask |In |Based |\\d+\\.)|\n*$)`,  // stop at prose or end
+    'i'
+  );
+
+  const match = text.match(rawMermaidPattern);
+  if (match) {
+    const rawBlock = match[1].trim();
+    // Strip the leading "mermaid " keyword since it will be the code fence language
+    const mermaidCode = rawBlock.replace(/^mermaid\s+/i, '');
+    text = text.replace(rawBlock, "```mermaid\n" + mermaidCode + "\n```");
+  }
+
+  return text;
+}
+
 export default function MessageContent({ content }) {
+  const processedContent = preprocessContent(content);
+
   return (
     <div className="prose prose-sm max-w-none" data-testid="message-content">
       <ReactMarkdown
@@ -55,7 +97,7 @@ export default function MessageContent({ content }) {
           },
         }}
       >
-        {content}
+        {processedContent}
       </ReactMarkdown>
     </div>
   );
