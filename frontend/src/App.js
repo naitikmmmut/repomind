@@ -1,68 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense, lazy } from "react";
 import "./App.css";
 import axios from "axios";
-import ReactMarkdown from "react-markdown";
+
+const MessageContent = lazy(() => import("./MarkdownRenderer"));
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
-
-// --- Markdown Renderer with Code Blocks ---
-function MessageContent({ content }) {
-  return (
-    <div className="prose prose-sm max-w-none" data-testid="message-content">
-      <ReactMarkdown
-        components={{
-          code({ node, inline, className, children, ...props }) {
-            const match = /language-(\w+)/.exec(className || "");
-            if (!inline && (match || String(children).includes("\n"))) {
-              return (
-                <div>
-                  {match && (
-                    <div className="code-block-header">{match[1]}</div>
-                  )}
-                  <pre className="code-block">
-                    <code {...props}>{String(children).replace(/\n$/, "")}</code>
-                  </pre>
-                </div>
-              );
-            }
-            return (
-              <code
-                className="bg-slate-100 px-1.5 py-0.5 font-mono text-xs border border-slate-200"
-                {...props}
-              >
-                {children}
-              </code>
-            );
-          },
-          p({ children }) {
-            return <p className="mb-3 text-sm leading-relaxed">{children}</p>;
-          },
-          ul({ children }) {
-            return <ul className="list-disc pl-5 mb-3 text-sm">{children}</ul>;
-          },
-          ol({ children }) {
-            return <ol className="list-decimal pl-5 mb-3 text-sm">{children}</ol>;
-          },
-          h1({ children }) {
-            return <h1 className="text-lg font-bold mb-2 font-[Chivo]">{children}</h1>;
-          },
-          h2({ children }) {
-            return <h2 className="text-base font-bold mb-2 font-[Chivo]">{children}</h2>;
-          },
-          h3({ children }) {
-            return <h3 className="text-sm font-bold mb-1 font-[Chivo]">{children}</h3>;
-          },
-          strong({ children }) {
-            return <strong className="font-semibold">{children}</strong>;
-          },
-        }}
-      >
-        {content}
-      </ReactMarkdown>
-    </div>
-  );
-}
 
 // --- Sidebar Component ---
 function Sidebar({ repos, selectedRepo, onSelectRepo, onNewRepo, onDeleteRepo, loading }) {
@@ -98,11 +41,11 @@ function Sidebar({ repos, selectedRepo, onSelectRepo, onNewRepo, onDeleteRepo, l
         <div className="sidebar-repos mb-4">
           {loading ? (
             <div className="p-4 text-center">
-              <span className="font-mono text-xs text-slate-400">LOADING...</span>
+              <span className="font-mono text-xs text-slate-600">LOADING...</span>
             </div>
           ) : repos.length === 0 ? (
             <div className="p-4 text-center">
-              <span className="font-mono text-xs text-slate-400">NO REPOS YET</span>
+              <span className="font-mono text-xs text-slate-600">NO REPOS YET</span>
             </div>
           ) : (
             repos.map((repo) => (
@@ -195,11 +138,11 @@ function IngestView({ onIngestStart, jobStatus, onBack }) {
   })();
 
   return (
-    <div className="main-content" data-testid="ingest-view">
+    <main className="main-content" data-testid="ingest-view">
       <div className="border-b border-border p-4 flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold tracking-tight font-[Chivo]">Ingest Repository</h2>
-          <p className="text-sm text-slate-500 mt-1">Paste a public GitHub repository URL to analyze its codebase</p>
+          <p className="text-sm text-slate-600 mt-1">Paste a public GitHub repository URL to analyze its codebase</p>
         </div>
         <button className="btn-secondary text-xs" onClick={onBack} data-testid="btn-back">
           BACK
@@ -271,7 +214,7 @@ function IngestView({ onIngestStart, jobStatus, onBack }) {
                     Files: {jobStatus.report.files_processed} | Chunks: {jobStatus.report.chunks_created} | Languages: {jobStatus.report.languages_detected?.join(", ")}
                   </div>
                   {jobStatus.report.ignored_files_count > 0 && (
-                    <div className="text-slate-500">
+                    <div className="text-slate-600">
                       Ignored: {jobStatus.report.ignored_files_count} files
                     </div>
                   )}
@@ -281,7 +224,7 @@ function IngestView({ onIngestStart, jobStatus, onBack }) {
           </div>
         )}
       </div>
-    </div>
+    </main>
   );
 }
 
@@ -312,7 +255,7 @@ function ChatView({ repo, messages, onSendMessage, loading }) {
   };
 
   return (
-    <div className="main-content" data-testid="chat-view">
+    <main className="main-content" data-testid="chat-view">
       <div className="border-b border-border p-4">
         <div className="flex items-center gap-3">
           <div className="w-6 h-6 bg-[#002FA7] flex items-center justify-center">
@@ -322,7 +265,7 @@ function ChatView({ repo, messages, onSendMessage, loading }) {
             <h2 className="text-base font-bold tracking-tight font-[Chivo]">
               {repo.collection_name}
             </h2>
-            <p className="text-xs text-slate-500 font-mono truncate max-w-md">{repo.repo_url}</p>
+            <p className="text-xs text-slate-600 font-mono truncate max-w-md">{repo.repo_url}</p>
           </div>
         </div>
       </div>
@@ -358,7 +301,9 @@ function ChatView({ repo, messages, onSendMessage, loading }) {
             <div className={`message-bubble ${msg.role}`} data-testid={`message-${msg.role}-${i}`}>
               <div className="overline mb-2">{msg.role === "user" ? "You" : "RepoMind"}</div>
               {msg.role === "ai" ? (
-                <MessageContent content={msg.content} />
+                <Suspense fallback={<div className="text-xs text-slate-600 animate-pulse">Loading message...</div>}>
+                  <MessageContent content={msg.content} />
+                </Suspense>
               ) : (
                 <p className="text-sm">{msg.content}</p>
               )}
@@ -383,7 +328,7 @@ function ChatView({ repo, messages, onSendMessage, loading }) {
         {loading && (
           <div className="message-bubble ai" data-testid="loading-indicator">
             <div className="overline mb-2">RepoMind</div>
-            <div className="font-mono text-xs text-slate-400">
+            <div className="font-mono text-xs text-slate-600">
               <span className="animate-pulse">Analyzing codebase...</span>
             </div>
           </div>
@@ -422,14 +367,14 @@ function ChatView({ repo, messages, onSendMessage, loading }) {
           )}
         </div>
       </div>
-    </div>
+    </main>
   );
 }
 
 // --- Empty State ---
 function EmptyState({ onNewRepo }) {
   return (
-    <div className="main-content" data-testid="empty-state">
+    <main className="main-content" data-testid="empty-state">
       <div className="empty-state">
         <div className="w-16 h-16 bg-[#002FA7] flex items-center justify-center mb-6">
           <span className="text-white font-mono text-2xl font-bold">RM</span>
@@ -437,7 +382,7 @@ function EmptyState({ onNewRepo }) {
         <h2 className="text-2xl font-black tracking-tight font-[Chivo] mb-2">
           CODEBASE ARCHAEOLOGIST
         </h2>
-        <p className="text-sm text-slate-500 max-w-md mb-8">
+        <p className="text-sm text-slate-600 max-w-md mb-8">
           Ingest any public GitHub repository and ask intelligent questions about its code.
           Understand architecture, find bugs, and explore functions.
         </p>
@@ -451,13 +396,13 @@ function EmptyState({ onNewRepo }) {
             { label: "ARCHITECT", desc: "Analyze project structure" },
           ].map((item) => (
             <div key={item.label} className="text-center">
-              <div className="overline mb-1 text-[#002FA7]">{item.label}</div>
-              <p className="text-xs text-slate-500">{item.desc}</p>
+              <div className="overline mb-1 text-[#001D66]">{item.label}</div>
+              <p className="text-xs text-slate-600">{item.desc}</p>
             </div>
           ))}
         </div>
       </div>
-    </div>
+    </main>
   );
 }
 

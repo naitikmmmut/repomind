@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://repomind-app.vercel.app/sitemap.xml
