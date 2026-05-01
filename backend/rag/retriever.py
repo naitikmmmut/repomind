@@ -139,6 +139,16 @@ def query_codebase(db: Session, user_message: str, collection_name: str, chat_hi
                 
             answer = "\n\n".join(parts)
 
+    # Format numbered lists in prose outside of code blocks
+    # Splitting by "```" guarantees that even indices are prose and odd indices are code blocks.
+    blocks = answer.split("```")
+    for i in range(0, len(blocks), 2):
+        # Insert double newlines before numbers or bullets that are stuck on the same line
+        blocks[i] = re.sub(r'(?<!\n)\s+(\d+\.\s+)', r'\n\n\1', blocks[i])
+        blocks[i] = re.sub(r'(?<!\n)\s+([*-]\s+)', r'\n\n\1', blocks[i])
+        
+    answer = "```".join(blocks)
+
     # Fix mixed diagram types
     if "participant" in answer.lower():
         answer = re.sub(r'graph\s+[LT]R', 'sequenceDiagram', answer, flags=re.IGNORECASE)
