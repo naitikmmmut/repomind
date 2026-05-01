@@ -12,31 +12,33 @@ function preprocessContent(text) {
   // If the content already has properly fenced mermaid blocks, leave it alone
   if (text.includes("```mermaid")) return text;
 
-  // Detect raw mermaid code: lines starting with diagram-type keywords
-  // Pattern: "mermaid" on its own or followed by a diagram type, then diagram content
-  const diagramTypes = [
-    'sequenceDiagram', 'graph', 'flowchart', 'classDiagram',
-    'stateDiagram', 'pie', 'gantt', 'erDiagram', 'journey'
-  ];
+  // Simple detection: look for "mermaid" followed by a diagram type keyword
+  const mermaidIdx = text.search(/mermaid\s+(sequenceDiagram|graph\s|flowchart\s|classDiagram|stateDiagram|erDiagram|pie|gantt|journey)/i);
+  if (mermaidIdx === -1) return text;
 
-  const diagramKeywords = diagramTypes.join('|');
+  // Extract everything from "mermaid" onwards
+  const fromMermaid = text.substring(mermaidIdx);
 
-  // Match "mermaid\n<diagramType>..." or "mermaid <diagramType>..."
-  // Capture everything until a double newline followed by prose text (sentence-like)
-  const rawMermaidPattern = new RegExp(
-    `(mermaid\\s+(?:${diagramKeywords})` +
-    `[\\s\\S]*?)` +  // greedy capture of mermaid code
-    `(?=\\n\\n(?:This |Here |The |Note |Please |Source|Ask |In |Based |\\d+\\.)|\n*$)`,  // stop at prose or end
-    'i'
-  );
+  // Find where the diagram code ends and prose begins.
+  // Look for double-newline followed by a prose sentence.
+  const proseBreak = fromMermaid.search(/\n\n(This |Here |The |Note:|Please |Based |In this|Source|Ask |\d+\. )/);
 
-  const match = text.match(rawMermaidPattern);
-  if (match) {
-    const rawBlock = match[1].trim();
-    // Strip the leading "mermaid " keyword since it will be the code fence language
-    const mermaidCode = rawBlock.replace(/^mermaid\s+/i, '');
-    text = text.replace(rawBlock, "```mermaid\n" + mermaidCode + "\n```");
+  let codeBlock, rest;
+  if (proseBreak !== -1) {
+    codeBlock = fromMermaid.substring(0, proseBreak).trim();
+    rest = fromMermaid.substring(proseBreak);
+  } else {
+    // No prose detected — the entire remaining text might be the diagram
+    codeBlock = fromMermaid.trim();
+    rest = "";
   }
+
+  // Strip the leading "mermaid" keyword
+  const mermaidCode = codeBlock.replace(/^mermaid\s+/i, "");
+
+  // Rebuild the text with proper fencing
+  const before = text.substring(0, mermaidIdx);
+  text = before + "```mermaid\n" + mermaidCode + "\n```\n" + rest;
 
   return text;
 }
