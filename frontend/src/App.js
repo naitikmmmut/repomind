@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback, Suspense, lazy } from "react";
 import "./App.css";
-import axios from "axios";
 
 // Smart Code Splitting: Lazy load heavy views, but keep EmptyState synchronous for fast LCP
 const IngestView = lazy(() => import("./IngestView"));
@@ -8,6 +7,24 @@ const ChatView = lazy(() => import("./ChatView"));
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+
+// Lightweight fetch helpers (replaces axios, saves ~13KB from bundle)
+async function api(url, options = {}) {
+  const res = await fetch(url, {
+    headers: { "Content-Type": "application/json", ...options.headers },
+    ...options,
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const err = new Error(data.detail || res.statusText);
+    err.data = data;
+    throw err;
+  }
+  return data;
+}
+const apiGet = (url) => api(url);
+const apiPost = (url, body) => api(url, { method: "POST", body: JSON.stringify(body) });
+const apiDelete = (url) => api(url, { method: "DELETE" });
 
 const HamburgerIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -169,8 +186,8 @@ function App() {
 
   const fetchRepos = useCallback(async () => {
     try {
-      const res = await axios.get(`${API}/repositories`);
-      setRepos(res.data);
+      const data = await apiGet(`${API}/repositories`);
+      setRepos(data);
     } catch (e) {
       console.error("Failed to fetch repos:", e);
     } finally {
@@ -188,10 +205,10 @@ function App() {
 
     const poll = async () => {
       try {
-        const res = await axios.get(`${API}/ingest/status/${currentJobId}`);
-        setJobStatus(res.data);
+        const data = await apiGet(`${API}/ingest/status/${currentJobId}`);
+        setJobStatus(data);
 
-        if (res.data.status === "completed" || res.data.status === "failed") {
+        if (data.status === "completed" || data.status === "failed") {
           clearInterval(pollRef.current);
           pollRef.current = null;
           setCurrentJobId(null);
@@ -219,28 +236,28 @@ function App() {
 
   const handleIngestStart = async (repoUrl, collectionName) => {
     try {
-      const res = await axios.post(`${API}/ingest`, {
+      const data = await apiPost(`${API}/ingest`, {
         repo_url: repoUrl,
         collection_name: collectionName || undefined,
       });
-      setCurrentJobId(res.data.job_id);
+      setCurrentJobId(data.job_id);
       setJobStatus({ status: "queued", progress_message: "Job queued" });
     } catch (e) {
       console.error("Ingest error:", e);
-      setJobStatus({ status: "failed", error: e.response?.data?.detail || e.message });
+      setJobStatus({ status: "failed", error: e.data?.detail || e.message });
     }
   };
 
   const fetchSessions = useCallback(async (collectionName) => {
     try {
-      const res = await axios.get(`${API}/chat/sessions/${collectionName}`);
-      if (res.data.sessions && res.data.sessions.length > 0) {
-        const sessionId = res.data.sessions[0].session_id;
+      const data = await apiGet(`${API}/chat/sessions/${collectionName}`);
+      if (data.sessions && data.sessions.length > 0) {
+        const sessionId = data.sessions[0].session_id;
         setCurrentSessionId(sessionId);
         
         setChatLoading(true);
-        const historyRes = await axios.get(`${API}/chat/history/${sessionId}`);
-        const formattedMessages = historyRes.data.messages.map(m => ({
+        const historyData = await apiGet(`${API}/chat/history/${sessionId}`);
+        const formattedMessages = historyData.messages.map(m => ({
           ...m,
           role: m.role === "assistant" ? "ai" : m.role
         }));
@@ -275,7 +292,7 @@ function App() {
 
   const handleDeleteRepo = async (collectionName) => {
     try {
-      await axios.delete(`${API}/repository/${collectionName}`);
+      await apiDelete(`${API}/repository/${collectionName}`);
       setRepos((prev) => prev.filter((r) => r.collection_name !== collectionName));
       if (selectedRepo?.collection_name === collectionName) {
         setSelectedRepo(null);
@@ -293,30 +310,30 @@ function App() {
     setChatLoading(true);
 
     try {
-      const res = await axios.post(`${API}/chat`, {
+      const data = await apiPost(`${API}/chat`, {
         user_message: text,
         collection_name: selectedRepo.collection_name,
         session_id: currentSessionId || undefined
       });
 
-      if (res.data.error) {
+      if (data.error) {
         setMessages((prev) => [
           ...prev,
-          { role: "ai", content: `Error: ${res.data.error}`, sources: [] },
+          { role: "ai", content: `Error: ${data.error}`, sources: [] },
         ]);
       } else {
         // If it was a new session, update state
-        if (!currentSessionId && res.data.session_id) {
-          setCurrentSessionId(res.data.session_id);
+        if (!currentSessionId && data.session_id) {
+          setCurrentSessionId(data.session_id);
         }
 
         setMessages((prev) => [
           ...prev,
           {
             role: "ai",
-            content: res.data.answer,
-            sources: res.data.sources || [],
-            intent: res.data.intent,
+            content: data.answer,
+            sources: data.sources || [],
+            intent: data.intent,
           },
         ]);
       }
@@ -325,7 +342,7 @@ function App() {
         ...prev,
         {
           role: "ai",
-          content: `Error: ${e.response?.data?.detail || e.message}`,
+          content: `Error: ${e.data?.detail || e.message}`,
           sources: [],
         },
       ]);
