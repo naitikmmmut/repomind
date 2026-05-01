@@ -79,34 +79,65 @@ def query_codebase(db: Session, user_message: str, collection_name: str, chat_hi
     answer = chat_completion(messages)
 
     # --- Robust Mermaid Post-Processing ---
-    # 1. Fix common syntax errors like "|>" instead of "|"
+    # First, fix |> syntax
     answer = answer.replace("|>", "|")
     
-    # 2. Fix missing backticks for Mermaid blocks
-    if "mermaid" in answer.lower() and "```mermaid" not in answer:
-        # Match "mermaid graph ...", "mermaid sequenceDiagram ...", etc.
-        mermaid_pattern = re.compile(r'(mermaid\s+(graph|sequenceDiagram|flowchart|classDiagram|stateDiagram|pie|gantt).*?)(?=\n\n|\n[A-Z][a-z]|$)', re.DOTALL | re.IGNORECASE)
-        match = mermaid_pattern.search(answer)
+    # We need to extract the mermaid code, whether it has backticks or not, 
+    # and apply the line-breaking parser because the LLM often outputs it on one line.
+    
+    # Check if there's a backtick block
+    block_match = re.search(r'```mermaid\s*(.*?)\s*```', answer, re.DOTALL | re.IGNORECASE)
+    
+    if block_match:
+        raw_code = block_match.group(1)
+        # Apply line breaks to the code
+        code = raw_code
+        for kw in ['participant', 'actor', 'Note', 'loop', 'alt', 'else', 'opt', 'par', 'rect', 'critical', 'activate', 'deactivate', 'style', 'classDef', 'subgraph', 'direction']:
+            code = re.sub(r'(?<!\n)\s+(' + kw + r'\b)', r'\n\1', code)
+        code = re.sub(r'(?<!\n)\s+([A-Za-z0-9_]+\s*(?:->>|-->|-->>|->))', r'\n\1', code)
+        code = re.sub(r'(?<!\n)\s+([A-Za-z0-9_]+\[.*?\]\s*(?:-->|->|-.->))', r'\n\1', code)
+        code = re.sub(r'(?<!\n)\s+(end\b)', r'\n\1', code)
+        
+        answer = answer.replace(block_match.group(0), f"```mermaid\n{code.strip()}\n```")
+    else:
+        # Fallback to the single-line extraction logic
+        match = re.search(r'(mermaid\s+(?:sequenceDiagram|graph|flowchart|classDiagram).*?)(?=\s+(?:This |Here |The |Note:|Please |Based |In this )|$)', answer, re.IGNORECASE)
+        
         if match:
-            # Wrap the identified mermaid block in triple backticks
-            answer = answer.replace(match.group(1), f"```mermaid\n{match.group(1).strip()}\n```")
-        elif answer.strip().startswith("mermaid"):
-            # Fallback if it starts with mermaid but regex missed it
-            lines = answer.strip().split("\n")
-            # Find where the mermaid code ends (usually the first empty line or a line with a lot of text)
-            end_idx = len(lines)
-            for idx, line in enumerate(lines):
-                if idx > 0 and len(line) > 100 and " " in line: # Likely plain text explanation starting
-                    end_idx = idx
-                    break
-            mermaid_code = "\n".join(lines[:end_idx])
-            explanation = "\n".join(lines[end_idx:])
-            answer = f"```mermaid\n{mermaid_code.strip()}\n```\n\n{explanation}"
+            raw_block = match.group(1).strip()
+            prose = answer[match.end():].strip()
+            
+            code = re.sub(r'^mermaid\s+', '', raw_block, flags=re.IGNORECASE)
+            
+            # Break lines before keywords
+            for kw in ['participant', 'actor', 'Note', 'loop', 'alt', 'else', 'opt', 'par', 'rect', 'critical', 'activate', 'deactivate', 'style', 'classDef', 'subgraph', 'direction']:
+                code = re.sub(r'(?<!\n)\s+(' + kw + r'\b)', r'\n\1', code)
+                
+            # Break lines before arrows: A->>B
+            code = re.sub(r'(?<!\n)\s+([A-Za-z0-9_]+\s*(?:->>|-->|-->>|->))', r'\n\1', code)
+            
+            # Break lines for flowchart nodes with arrows: A[Text] -->
+            code = re.sub(r'(?<!\n)\s+([A-Za-z0-9_]+\[.*?\]\s*(?:-->|->|-.->))', r'\n\1', code)
 
-    # 3. Fix mixed diagram types (e.g. participant used in a flowchart)
+            # Break lines before 'end'
+            code = re.sub(r'(?<!\n)\s+(end\b)', r'\n\1', code)
+            
+            before = answer[:match.start()].strip()
+            
+            parts = []
+            if before:
+                parts.append(before)
+            parts.append(f"```mermaid\n{code.strip()}\n```")
+            if prose:
+                parts.append(prose)
+                
+            answer = "\n\n".join(parts)
+
+    # Fix mixed diagram types
     if "participant" in answer.lower():
         answer = re.sub(r'graph\s+[LT]R', 'sequenceDiagram', answer, flags=re.IGNORECASE)
         answer = re.sub(r'flowchart\s+[LT]R', 'sequenceDiagram', answer, flags=re.IGNORECASE)
+
     sources = []
     seen = set()
     for r in results:

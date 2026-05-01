@@ -45,12 +45,6 @@ function sanitizeMermaid(raw) {
     code = code.replace(regex, '\n$1');
   }
 
-  // Insert newlines before arrow patterns (A->>B:, A-->B:, A->B:, A-->>B:)
-  // But only when they're not already at the start of a line
-  code = code.replace(/(?<!\n)(\s)(\w[\w ]*?->>)/g, '\n$2');
-  code = code.replace(/(?<!\n)(\s)(\w[\w ]*?-->>)/g, '\n$2');
-  code = code.replace(/(?<!\n)(\s)(\w[\w ]*?-->)/g, '\n$2');
-
   // Detect mixed diagram: "graph" header + "participant" keyword
   const hasGraphHeader = /^(graph|flowchart)\s+(LR|TD|TB|RL|BT)/im.test(code);
   const hasParticipant = /\bparticipant\b/i.test(code);
