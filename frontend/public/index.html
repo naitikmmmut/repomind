@@ -39,87 +39,15 @@
         --radius: 0px;
         --surface-hover: 210 40% 96%;
       }
-
       body {
         margin: 0;
         background-color: hsl(var(--background));
         color: hsl(var(--foreground));
-        font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      }
-
-      .loading-container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100vh;
-        text-align: center;
-        padding: 48px;
-      }
-
-      .loading-logo {
-        width: 64px;
-        height: 64px;
-        background: #002FA7;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 24px;
-        color: white;
-        font-family: 'IBM Plex Mono', monospace;
-        font-weight: bold;
-        font-size: 24px;
-      }
-
-      .loading-title {
-        font-family: 'Chivo', sans-serif;
-        font-size: 24px;
-        font-weight: 900;
-        letter-spacing: -0.025em;
-        margin-bottom: 8px;
-        text-transform: uppercase;
-      }
-
-      .loading-subtitle {
-        font-size: 14px;
-        color: hsl(var(--muted-foreground));
-        max-width: 400px;
-        line-height: 1.5;
-      }
-
-      .sidebar-skeleton {
-        display: none;
-      }
-
-      @media (min-width: 769px) {
-        .loading-wrapper {
-          display: flex;
-          height: 100vh;
-        }
-        .sidebar-skeleton {
-          display: block;
-          width: 280px;
-          min-width: 280px;
-          background: hsl(var(--card));
-          border-right: 1px solid hsl(var(--border));
-        }
-        .loading-container {
-          flex: 1;
-        }
       }
     </style>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root">
-      <div class="loading-wrapper">
-        <div class="sidebar-skeleton"></div>
-        <div class="loading-container">
-          <div class="loading-logo">RM</div>
-          <h1 class="loading-title">REPOMIND</h1>
-          <p class="loading-subtitle">Codebase Archaeologist is initializing...</p>
-        </div>
-      </div>
-    </div>
+    <div id="root"></div>
   </body>
 </html>
