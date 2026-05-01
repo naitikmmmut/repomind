@@ -26,6 +26,31 @@ function sanitizeMermaid(raw) {
   // Fix "-->|Label|> Node" patterns  →  "-->|Label| Node"
   code = code.replace(/\|>\s*/g, '| ');
 
+  // --- CRITICAL: Break single-line mermaid into multi-line ---
+  // The LLM often dumps everything on one line. Mermaid needs each statement on its own line.
+  // Insert newlines before key mermaid keywords that must start on a new line.
+  const lineBreakKeywords = [
+    'participant ', 'actor ',
+    'Note ', 'Note over ', 'Note left ', 'Note right ',
+    'loop ', 'alt ', 'else ', 'opt ', 'par ', 'rect ', 'critical ',
+    'end',
+    'activate ', 'deactivate ',
+    'style ', 'classDef ',
+    'subgraph ', 'direction ',
+  ];
+
+  for (const kw of lineBreakKeywords) {
+    // Only insert newline if the keyword isn't already at the start of a line
+    const regex = new RegExp('(?<!^)(?<!\\n)(' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'g');
+    code = code.replace(regex, '\n$1');
+  }
+
+  // Insert newlines before arrow patterns (A->>B:, A-->B:, A->B:, A-->>B:)
+  // But only when they're not already at the start of a line
+  code = code.replace(/(?<!\n)(\s)(\w[\w ]*?->>)/g, '\n$2');
+  code = code.replace(/(?<!\n)(\s)(\w[\w ]*?-->>)/g, '\n$2');
+  code = code.replace(/(?<!\n)(\s)(\w[\w ]*?-->)/g, '\n$2');
+
   // Detect mixed diagram: "graph" header + "participant" keyword
   const hasGraphHeader = /^(graph|flowchart)\s+(LR|TD|TB|RL|BT)/im.test(code);
   const hasParticipant = /\bparticipant\b/i.test(code);
@@ -35,7 +60,6 @@ function sanitizeMermaid(raw) {
     // Convert to a pure sequence diagram.
     code = code.replace(/^(graph|flowchart)\s+(LR|TD|TB|RL|BT)/im, 'sequenceDiagram');
     // Remove flowchart-style node definitions that are invalid in sequence diagrams
-    // e.g.  A[Some Text]  →  keep only participant lines
     code = code.replace(/(\w+)\[([^\]]+)\]/g, '$1');
     // Remove style lines (only valid in flowcharts)
     code = code.replace(/^\s*style\s+.+$/gm, '');
